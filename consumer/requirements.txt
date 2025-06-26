@@ -1,0 +1,5 @@
+confluent-kafka 
+fastavro 
+pymongo 
+requests
+pytest

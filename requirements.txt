@@ -1,0 +1,10 @@
+pymongo
+pyflink
+protobuf
+google
+pymongo[srv]
+avro-python3
+confluent_kafka[avro]
+fastavro
+avro-python3==1.10.2
+pytest

@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "JobOffer",
+  "fields": [
+    {"name": "title", "type": "string"},
+    {"name": "company", "type": "string"},
+    {"name": "location", "type": ["null", "string"], "default": null},
+    {"name": "salary_range", "type": {"type": "array", "items": "string"}},
+    {"name": "link", "type": "string"},
+    {"name": "required_skills", "type": {"type": "array", "items": "string"}},
+    {"name": "employment_type", "type": {"type": "array", "items": "string"}},
+    {"name": "experience_level", "type": {"type": "array", "items": "string"}},
+    {"name": "contract_type", "type": {"type": "array", "items": "string"}},
+    {"name": "work_mode", "type": {"type": "array", "items": "string"}},
+    {"name": "published_dt", "type": ["null", "string"], "default": null},
+    {"name": "scraped_dt", "type": "string"}
+  ]
+}

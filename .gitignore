@@ -1,0 +1,29 @@
+# 🛡️ Environment variables and secrets
+.env
+
+# 🍏 macOS system files
+.DS_Store
+
+# 🐍 Python bytecode and cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 📦 Virtual environments
+.venv/
+venv/
+
+# 📄 Log files
+*.log
+
+# 🧠 IDE settings (Visual Studio Code, PyCharm, etc.)
+.vscode/
+.idea/
+
+# 🐳 Optional: Docker artifacts (if exported manually)
+*.tar
+*.bak
+
+# 🚫 Ignore Flink job dependencies
+flink_job/lib/

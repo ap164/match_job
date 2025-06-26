@@ -1,0 +1,29 @@
+FROM python:3.11-slim
+
+# Instalacja wymaganych narzędzi
+RUN apt-get update && apt-get install -y \
+    chromium \
+    chromium-driver \
+    fonts-liberation \
+    libnss3 \
+    libxss1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libgtk-3-0 \
+    wget \
+    curl \
+    unzip \
+    gnupg \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Ustawienia środowiskowe
+ENV CHROME_BIN=/usr/bin/chromium
+ENV PATH="${PATH}:/usr/bin"
+
+WORKDIR /app
+COPY . .
+
+# Instalacja zależności Pythona
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["sh", "-c", "sleep 100; while true; do python producer_scraper_2.py; sleep 30000; done"]
