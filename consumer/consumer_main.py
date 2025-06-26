@@ -1,31 +1,29 @@
-print("=== DEBUG: consumer_main.py start ===", flush=True)
-print("🔍 Import start", flush=True)
+from consumer.utils import (
+    load_avro_schema,
+    get_consumer,
+    get_collection,
+    decode_confluent_avro,
+    is_duplicate)
 
-
-try:
-    print("Import utils...", flush=True)
-    from consumer.utils import (
-        load_avro_schema,
-        get_consumer,
-        get_collection,
-        decode_confluent_avro,
-        is_duplicate)
-    print("Import transform...", flush=True)
-    from consumer.transform import (
-        parse_salary,
-        work_mode_normalize,
-        parse_experience_level,
-        normalize_location,
-        normalize_skills,
-        normalize_full_contract_type,
-        normalize_employment_type)
-    print("Importy OK", flush=True)
+from consumer.transform import (
+    parse_salary,
+    work_mode_normalize,
+    parse_experience_level,
+    normalize_location,
+    normalize_skills,
+    normalize_full_contract_type,
+    normalize_employment_type)
     
-except Exception as e:
-    print("❌ Błąd podczas importów:", e, flush=True)
-    import traceback
-    traceback.print_exc()
+
 def start_consumer_loop(consumer, collection, avro_schema):
+    """
+    Main loop for consuming Kafka messages, transforming, filtering, and saving them to MongoDB.
+
+    Args:
+        consumer (Consumer): Kafka Consumer instance.
+        collection (Collection): MongoDB collection to store records.
+        avro_schema (dict): Avro schema for decoding messages.
+    """
     while True:
         msg = consumer.poll(1.0)
         if msg is None:
@@ -40,48 +38,51 @@ def start_consumer_loop(consumer, collection, avro_schema):
             print("Avro decode error:", e, flush=True)
             continue
 
-        # 1.  WYNAGRODZENIE NORMALIZACJA
+        # 1. SALARY NORMALIZATION
         record["salary"] = parse_salary(record.get("salary", ""))
-        # 2. NORMALIZACJA TRYBU PRACY
+        # 2. WORK MODE NORMALIZATION
         record["work_mode"] = work_mode_normalize(record.get("work_mode", []))
-        # 3. NORMALIZACJA POZIOMU DOŚWIADCZENIA
+        # 3. EXPERIENCE LEVEL NORMALIZATION
         record["experience_level"] = parse_experience_level(record.get("experience_level", ""))
-        # 4. NORMALIZACJA LOKALIZACJI
+        # 4. LOCATION NORMALIZATION
         record["location"] = normalize_location(record.get("location", ""))
-        # 5. NORMALIZACJA WYMAGANYCH UMIEJĘTNOŚCI
+        # 5. REQUIRED SKILLS NORMALIZATION
         record["required_skills"] = normalize_skills(record.get("required_skills", []))
-        # 6. NORMALIZACJA DANYCH O FIRMIE
+        # 6. COMPANY NAME NORMALIZATION
         record["company"] = record.get("company", "").upper()
-        # 7. NORMALIZACJA TYTUŁU OFERTY
+        # 7. JOB TITLE NORMALIZATION
         record["title"] = record.get("title", "").upper()
-        # 8. NORMALIZACJA TYPU UMOWY
+        # 8. CONTRACT TYPE NORMALIZATION
         record["contract_type"] = normalize_full_contract_type(record.get("contract_type", ""), record.get("salary", []))
-        # 9. NORMALIZACJA TYPU ZATRUDNIENIA
+        # 9. EMPLOYMENT TYPE NORMALIZATION
         record["employment_type"] = normalize_employment_type(record.get("employment_type", ""))
-        # 10. DEDUPLIKACJA
+        # 10. DEDUPLICATION
         if is_duplicate(record, collection):
-            print("⚠️ Duplikat, pomijam:", record.get("title"))
+            print("⚠️ Duplicate, skipping:", record.get("title"))
             continue
 
-        # 11. FILTRACJA (stacjonarka)
+        # 11. FILTERING (on-site)
         work_mode = record.get("work_mode", [])
         if "on-site" in work_mode and ("remote" not in work_mode or "hybrid" not in work_mode) and len(work_mode) == 1:
-            print("Filtered out (stacjonarka):", record.get("title"))
+            print("Filtered out (on-site):", record.get("title"))
             continue
 
-        # 12. FILTRACJA (senior level)
-        work_mode = record.get("experience_level", [])
-        if "senior" in work_mode and len(work_mode) == 1:
-            print("Filtered out (senior lvl):", record.get("title"))
+        # 12. FILTERING (NO senior level)
+        experience_level = record.get("experience_level", [])
+        if "senior" in experience_level and len(experience_level) == 1:
+            print("Filtered out (senior level):", record.get("title"))
             continue    
         
-        # 13. ZAPIS DO MONGO
+        # 13. SAVE TO MONGO
         collection.insert_one(record)
-        print("✔ Wstawiono:", record["title"], "|", record["company"] )
-
+        print("✔ Inserted:", record["title"], "|", record["company"] )
 
 
 if __name__ == "__main__":
+    """
+    Entry point for the Kafka consumer script.
+    Loads schema, initializes consumer and MongoDB, and starts the main loop.
+    """
     print("Consumer started!", flush=True)
     try:
         avro_schema = load_avro_schema()
@@ -90,6 +91,6 @@ if __name__ == "__main__":
         consumer.subscribe(["raw_offers"])
         start_consumer_loop(consumer, collection, avro_schema)
     except Exception as e:
-        print("❌ Błąd w main:", e, flush=True)
+        print("Error in main:", e, flush=True)
         import traceback
         traceback.print_exc()
