@@ -82,12 +82,12 @@ services:
     entrypoint: /bin/bash
     command: >
       -c '
-      echo "Czekam na brokera...";
+      echo "Wait for broker...";
       while ! kafka-topics --bootstrap-server kafka:9092 --list > /dev/null 2>&1; do
         echo "Kafka is not ready yet. wait for 5s...";
         sleep 5;
       done;
-      echo "Kafka is ready. create topic...";
+      echo "Kafka is ready. Create topic...";
 
       kafka-topics --bootstrap-server kafka:9092 \
         --create --if-not-exists \
@@ -96,7 +96,7 @@ services:
         --config retention.ms=604800000 \
         --config segment.bytes=262144000 \
         --topic raw_offers;
-      echo "Topic utworzono.";
+      echo "Topic is ready.";
       '
     networks:
       - kafka-net
@@ -137,7 +137,7 @@ services:
     restart: unless-stopped
     command: >
       sh -c "
-        echo 'Wait for Kafka na porcie 9092...';
+        echo 'Wait for Kafka on port 9092...';
         while ! nc -z kafka 9092; do sleep 2; done;
         echo 'Kafka is ready – consumer starting';
         python consumer/consumer_main.py
