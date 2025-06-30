@@ -1,8 +1,7 @@
-kafka-python
-requests
-python-dotenv
-dotenv
 selenium
 beautifulsoup4
+kafka-python
+python-dotenv
+dotenv
 confluent_kafka[avro]
 fastavro

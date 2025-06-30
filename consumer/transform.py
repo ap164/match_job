@@ -3,6 +3,8 @@ from consumer.utils import fetch_exchange_rate
 
 def work_mode_normalize(work_mode):
     """Normalize work mode values and remove duplicates."""
+    if not work_mode or (isinstance(work_mode, list) and not any(work_mode)):
+        return None
     normalized_modes = []
     seen = set()
 
@@ -38,6 +40,8 @@ def normalize_skills(raw_skills):
     Returns:
         list: List of dictionaries, e.g. [{"skill": "python", "level": "regular"}, ...]
     """
+    if not raw_skills or (isinstance(raw_skills, list) and not any(raw_skills)):
+        return None
     normalized = []
     seen = set()
     if all(isinstance(skill, str) for skill in raw_skills):
@@ -54,7 +58,7 @@ def normalize_skills(raw_skills):
                 level = level.strip().lower()
             else:
                 name = skill.strip().lower()
-                level = "unspecified"
+                level = "excpected"
 
             key = (name, level)
 
@@ -68,7 +72,9 @@ def normalize_skills(raw_skills):
     return normalized    
 
 def parse_experience_level(text):
-    """Normalize experience level values and remove duplicates."""
+    """Normalize experience level values and remove duplicates."""  
+    if not text or (isinstance(text, list) and not any(text)):
+        return None
     normalized_lvl = []
     seen = set()
     if isinstance(text, str):
@@ -103,7 +109,9 @@ def normalize_location(entry):
 
     Returns:
         dict: Dictionary with keys 'remote', 'city', and 'district'.
-    """
+    """    
+    if not entry or (isinstance(entry, list) and not any(entry)):
+        return None
     if not entry:
         return {"remote": False, "city": None, "district": None}
 
@@ -111,7 +119,7 @@ def normalize_location(entry):
         entry = " ".join(entry)
 
     result = {
-        "remote": False,
+        # "remote": False,
         "city": None,
         "district": None
     }
@@ -120,8 +128,8 @@ def normalize_location(entry):
         return result
 
     # Detect remote work
-    if re.search(r"(praca zdalna|cała polska|remote work|entire poland|fully remote)", entry, flags=re.IGNORECASE):
-        result["remote"] = True
+    # if re.search(r"(praca zdalna|cała polska|remote work|entire poland|fully remote)", entry, flags=re.IGNORECASE):
+    #     result["remote"] = True
 
     location_part = entry
     # Try to extract city and district
@@ -139,6 +147,7 @@ def normalize_location(entry):
         result["district"] = ", ".join(parts[1:])
 
     return result
+import re
 
 def parse_salary(texts):
     """
@@ -150,6 +159,8 @@ def parse_salary(texts):
     Returns:
         list: List of dictionaries with salary details.
     """
+    if not texts or (isinstance(texts, list) and not any(texts)):
+        return None
     results = []
 
     if not isinstance(texts, list):
@@ -169,25 +180,41 @@ def parse_salary(texts):
             results.append(result)
             continue
 
-        # Replace EN DASH, EM DASH with minus
-        text = text.replace('–', '-').replace('—', '-')  
+        # Normalize input
+        text = text.replace('–', '-').replace('—', '-')  # EN/EM dash to hyphen
+        text = text.replace(',', '.')  # comma to dot for decimal handling
 
-        # Find salary range
-        match = re.search(r'([\d\s]+)[–-]([\d\s]+)', text)
-        if match:
-            min_val = int(match.group(1).replace(' ', ''))
-            max_val = int(match.group(2).replace(' ', ''))
+        # Extract main part before separators like "|"
+        main_part = text.split("|")[0]
 
-            # Monthly or hourly?
-            is_monthly = bool(re.search(r'mies|miesięcz|month', text.lower()))
-            is_hourly = bool(re.search(r'godz|/h|hour', text.lower()))
+        # Try to find a salary range
+        range_match = re.search(r'([\d\s.]+)[–-]([\d\s.]+)', main_part)
+        if range_match:
+            min_str = range_match.group(1).replace(' ', '')
+            max_str = range_match.group(2).replace(' ', '')
+            min_val = float(min_str) if min_str else None
+            max_val = float(max_str) if max_str else None
 
+        else:
+            # Try to extract a single value
+            single_match = re.search(r'(\d[\d\s.]*)', main_part)
+            if single_match:
+                min_val = max_val = float(single_match.group(1).replace(' ', ''))
+            else:
+                min_val = max_val = None
+
+        # Monthly or hourly?
+        is_monthly = bool(re.search(r'mies|miesięcz|month', text.lower()))
+        is_hourly = bool(re.search(r'godz|/h|hour', text.lower()))
+
+        if min_val is not None:
             if is_monthly:
                 result["min"] = round(min_val / 160, 2)
                 result["max"] = round(max_val / 160, 2)
-            elif is_hourly:
-                result["min"] = min_val
-                result["max"] = max_val
+            else:
+                # default to hourly if monthly not found
+                result["min"] = round(min_val, 2)
+                result["max"] = round(max_val, 2)
 
         # Detect currency
         if "€" in text or "eur" in text.lower():
@@ -214,18 +241,20 @@ def parse_salary(texts):
             result["net_gross"] = "gross"
 
         # Detect contract type
-        if "b2b" in text.lower() or "(+vat)" in text.lower():
+        if "b2b" in text.lower() or re.search(r'\(\s*\+\s*vat\s*\)', text, re.IGNORECASE):
             result["contract"] = "b2b"
+
         elif "permanent" in text.lower():
             result["contract"] = "permanent"
         elif "mandate" in text.lower():
             result["contract"] = "mandate"    
         elif "any" in text.lower():
             result["contract"] = "any"
-            
+
         results.append(result)
 
     return results
+
 
 def normalize_employment_type(employment_type):
     """
@@ -237,23 +266,29 @@ def normalize_employment_type(employment_type):
     Returns:
         dict or None: Dictionary with employment type flags or None.
     """
+    if not employment_type or (isinstance(employment_type, list) and not any(employment_type)):
+        return None
     employment_types = {"full_time": False, "part_time": False}
 
-    if not employment_type or not isinstance(employment_type, str) or not employment_type.strip():
-        return None  
+    # Obsługa list i pustych wartości w jednym warunku
+    if not employment_type or (isinstance(employment_type, list) and not any(employment_type)):
+        return None
+    if isinstance(employment_type, list):
+        employment_type = ", ".join([str(e) for e in employment_type if e])
+    if not isinstance(employment_type, str) or not employment_type.strip():
+        return None
 
     text = employment_type.lower().strip()
 
     if any(kw in text for kw in ["full", "pełny", "pelny"]):
         employment_types["full_time"] = True
-
     if any(kw in text for kw in ["part", "część", "czesc", "dodatkowa", "tymczasow"]):
         employment_types["part_time"] = True
 
     if not employment_types["full_time"] and not employment_types["part_time"]:
-        employment_types["other"] = text
-
+        return {"full_time": False, "part_time": False, "other": employment_type.lower()}
     return employment_types
+
 
 def normalize_contract_type(contract_type):
     """
@@ -293,6 +328,8 @@ def salary_option_vs_contract_type(salary_list, contract_types):
     Returns:
         dict: Updated contract type flags.
     """
+    if not isinstance(contract_types, dict) or not isinstance(salary_list, list):
+        return None
     for entry in salary_list:
         salary_contract_type = entry.get("contract")
         if salary_contract_type == "b2b":
@@ -316,14 +353,16 @@ def normalize_full_contract_type(declared_contract_type, salary_list):
     Returns:
         dict or None: Combined contract type flags or None.
     """
+
     if not declared_contract_type and not salary_list:
         return None
-
+    
+    if isinstance(declared_contract_type, list):
+        declared_contract_type = ", ".join([str(e) for e in declared_contract_type if e])
     normalized = normalize_contract_type(declared_contract_type)
     if normalized is None:
         normalized = {"permanent": False, "b2b": False, "mandate": False}
-
     if not salary_list:
         return normalized
-
     return salary_option_vs_contract_type(salary_list, normalized)
+

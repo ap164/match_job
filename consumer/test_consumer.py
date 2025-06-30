@@ -1,5 +1,5 @@
 import pytest
-from consumer.transform import (
+from transform import (
     normalize_location,
     work_mode_normalize,
     parse_experience_level,
@@ -11,20 +11,20 @@ from consumer.transform import (
     normalize_employment_type
 )
 
-from consumer.utils import fetch_exchange_rate
+from utils import fetch_exchange_rate
 
 def test_normalize_location():
-    assert normalize_location([]) == {"remote": False, "city": None, "district": None}
-    assert normalize_location("") == {"remote": False, "city": None, "district": None}
-    assert normalize_location(" Cała Polska (praca zdalna)Warszawa") == {"remote": True, "city": "Warszawa", "district": None}
-    assert normalize_location(" Cała Polska (praca zdalna)Wrocław, Fabryczna") == {"remote": True, "city": "Wrocław", "district": "Fabryczna"}
-    assert normalize_location("Warszawa") == {"remote": False, "city": "Warszawa","district": None,}
-    assert normalize_location("Warszawa, Mokotów") == { "remote": False, "city": "Warszawa", "district": "Mokotów"}    
-    assert normalize_location("Warszawa, Mokotów, Ursynów") == {"remote": False, "city": "Warszawa", "district": "Mokotów, Ursynów"}
+    assert normalize_location([]) == None
+    assert normalize_location("") == None
+    assert normalize_location(" Cała Polska (praca zdalna)Warszawa") == {"city": "Warszawa", "district": None}
+    assert normalize_location(" Cała Polska (praca zdalna)Wrocław, Fabryczna") == {"city": "Wrocław", "district": "Fabryczna"}
+    assert normalize_location("Warszawa") == {"city": "Warszawa","district": None,}
+    assert normalize_location("Warszawa, Mokotów") == { "city": "Warszawa", "district": "Mokotów"}    
+    assert normalize_location("Warszawa, Mokotów, Ursynów") == {"city": "Warszawa", "district": "Mokotów, Ursynów"}
 
 def test_work_mode_normalize():
-    assert work_mode_normalize([]) == []        
-    assert work_mode_normalize([""]) == []
+    assert work_mode_normalize([]) == None     
+    assert work_mode_normalize([""]) == None
     assert work_mode_normalize(["Praca zdalna"]) == ["remote"]
     assert work_mode_normalize(["Praca hybrydowa"]) == ["hybrid"]
     assert work_mode_normalize(["Praca stacjonarna"]) == ["on-site"]
@@ -32,8 +32,8 @@ def test_work_mode_normalize():
     assert work_mode_normalize(["Praca stacjonarna", "Praca zdalna"]) == ["on-site", "remote"]
 
 def test_parse_experience_level():
-    assert parse_experience_level([]) == []
-    assert parse_experience_level([""]) == []
+    assert parse_experience_level([]) == None
+    assert parse_experience_level([""]) == None
     assert parse_experience_level(["Junior"]) == ["junior"]
     assert parse_experience_level(["Mid"]) == ["mid"]
     assert parse_experience_level(["Senior"]) == ["senior"]
@@ -44,24 +44,17 @@ def test_parse_experience_level():
     assert parse_experience_level(["Junior", "Junior","Mid",]) == ["junior", "mid"]
 
 def test_normalize_skills():
-    assert normalize_skills([]) == []
-    assert normalize_skills([""]) == []
-    assert normalize_skills(["Python"]) == [{"skill":"python","level": "unspecified"}]
-    assert normalize_skills(["Python", "Python"]) == [{"skill":"python","level": "unspecified"}]
-    assert normalize_skills(["Python", "Java"]) == [{"skill":"python","level": "unspecified"}, {"skill":"java","level": "unspecified"}]
-    assert normalize_skills(["SQL","PostgreSQL (optional)"]) == [{"skill":"sql","level": "unspecified"}, {"skill":"postgresql","level": "optional"}]
+    assert normalize_skills([]) == None
+    assert normalize_skills([""]) == None
+    assert normalize_skills(["Python"]) == [{"skill":"python","level": "excpected"}]
+    assert normalize_skills(["Python", "Python"]) == [{"skill":"python","level": "excpected"}]
+    assert normalize_skills(["Python", "Java"]) == [{"skill":"python","level": "excpected"}, {"skill":"java","level": "excpected"}]
+    assert normalize_skills(["SQL","PostgreSQL (optional)"]) == [{"skill":"sql","level": "excpected"}, {"skill":"postgresql","level": "optional"}]
     assert normalize_skills(["English (B2)","AWS (advanced)"]) == [{"skill":"english","level": "b2"}, {"skill":"aws","level": "advanced"}]
 
 def test_parse_salary():
-    assert parse_salary([]) == []
-    assert parse_salary([""]) == [{
-        "min": None,
-        "max": None,
-        "currency": None,
-        "unit": "hour", 
-        "net_gross": None,
-        "contract": None
-    }]
+    assert parse_salary([]) == None
+    assert parse_salary([""]) == None
     assert parse_salary(["18 000-22 000PLN/month (Net per month - B2B)"]) == [{"min": 112.50, 
                                                                                "max": 137.50, 
                                                                                "currency": "PLN", 
@@ -112,7 +105,12 @@ def test_parse_salary():
                                                                                     "unit": "hour",
                                                                                     "net_gross": None,
                                                                                     "contract": None}]
-    
+    assert parse_salary([ "170,00 zł netto (+ VAT) / godz."]) == [{"min": 170.00, 
+                                                                                    "max": 170.00, 
+                                                                                    "currency": "PLN", 
+                                                                                    "unit": "hour",
+                                                                                    "net_gross": "net",
+                                                                                    "contract": "b2b"}]
     eur_rate = fetch_exchange_rate("EUR")
     result = parse_salary(["80–140€/ godz. (zal. od umowy)"])[0]
     assert result == {
@@ -123,6 +121,7 @@ def test_parse_salary():
         "net_gross": None,
         "contract": None
     }
+    
 
 # def test_fetch_exchange_rate():
 #     assert fetch_exchange_rate("EUR") == 4.2727 # Example value, actual value may vary 

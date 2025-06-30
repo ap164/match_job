@@ -8,3 +8,10 @@ confluent_kafka[avro]
 fastavro
 avro-python3==1.10.2
 pytest
+pandas
+jupyter
+numpy
+matplotlib
+yaml
+papermill
+python-dotenv

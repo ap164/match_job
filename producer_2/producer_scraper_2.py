@@ -3,72 +3,102 @@ import json
 import time
 import re
 import random
-import traceback
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 from kafka import KafkaProducer
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from confluent_kafka.avro import AvroProducer, loads
 from confluent_kafka.avro.cached_schema_registry_client import CachedSchemaRegistryClient
 
-# === Configure logging ===
+# === Logger configuration ===
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-# === Load environment variables ===
+# === Environment variables ===
 load_dotenv()
-URL_1 = os.getenv("URL_1")
-USER_AGENT_1 = os.getenv("USER_1", "")
-LISTINGS_PATH = os.getenv("LISTINGS_PATH")
+URL_2 = os.getenv("URL_2")
 KAFKA_BOOTSTRAP_SERVERS_COMMON = os.getenv("KAFKA_BOOTSTRAP_SERVERS_COMMON")
-PRODUCER_CLIENT_ID_1 = os.getenv("PRODUCER_CLIENT_ID_1")
+PRODUCER_CLIENT_ID_2 = os.getenv("PRODUCER_CLIENT_ID_2")
 ROW_DATA_TOPIC = os.getenv("ROW_DATA_TOPIC")
+LISTINGS_PATH_2 = os.getenv("LISTINGS_PATH_2")
 SCHEMA_REGISTRY_URL = os.getenv("SCHEMA_REGISTRY_URL")
 
-LISTINGS_CONTAINER_SELECTOR = os.getenv("LISTINGS_CONTAINER_SELECTOR")
-OFFER_CARD_SELECTOR = os.getenv("OFFER_CARD_SELECTOR")
-DETAILS_CONTAINER_SELECTOR = os.getenv("DETAILS_CONTAINER_SELECTOR")
-LOCATION_ICON_SELECTOR = os.getenv("LOCATION_ICON_SELECTOR")
-COMPANY_ICON_SELECTOR = os.getenv("COMPANY_ICON_SELECTOR")
-PUBLISHED_SELECTOR = os.getenv("PUBLISHED_SELECTOR")
-METADATA_BOX_SELECTOR = os.getenv("METADATA_BOX_SELECTOR")
-METADATA_TITLE_SELECTOR = os.getenv("METADATA_TITLE_SELECTOR")
-METADATA_VALUE_SELECTOR = os.getenv("METADATA_VALUE_SELECTOR")
-SKILLS_BOX_SELECTOR = os.getenv("SKILLS_BOX_SELECTOR")
-SALARY_BOX_SELECTOR = os.getenv("SALARY_BOX_SELECTOR")
-SALARY_MINMAX_SELECTOR = os.getenv("SALARY_MINMAX_SELECTOR")
-SALARY_DETAILS_SELECTOR = os.getenv("SALARY_DETAILS_SELECTOR")
-UNDISCLOSED_SELECTOR = os.getenv("UNDISCLOSED_SELECTOR")
-SALARYTEXT = os.getenv("SALARY_TEXT")
-SALARY_RESULT = os.getenv("SALARY_RESULT")
+OFFER_SELECTOR = os.getenv("OFFER_SELECTOR")
+TITLE_SELECTOR = os.getenv("TITLE_SELECTOR")
+COMPANY_SELECTOR = os.getenv("COMPANY_SELECTOR")
+LOCATION_SELECTOR = os.getenv("LOCATION_SELECTOR")
+SALARY_SELECTOR = os.getenv("SALARY_SELECTOR")
+LINK_SELECTOR = os.getenv("LINK_SELECTOR")
+PUBLISHED_SELECTOR = os.getenv("PUBLISHED1_SELECTOR")
+TECH_REQUIRED_SELECTOR = os.getenv("TECH_REQUIRED_SELECTOR")
+TECH_OPTIONAL_SELECTOR = os.getenv("TECH_OPTIONAL_SELECTOR")
+ADDITIONAL_INFO_SELECTOR = os.getenv("ADDITIONAL_INFO_SELECTOR")
+LOCATION_PREFIX_1 = os.getenv("LOCATION_PREFIX_1", "")
+LOCATION_PREFIX_2 = os.getenv("LOCATION_PREFIX_2", "")
 
-def init_driver() -> webdriver.Chrome:
-    """Initialize and return a configured Selenium Chrome WebDriver."""
+
+# === Constants ===
+POLISH_MONTHS = {
+    'stycznia': 1, 'lutego': 2, 'marca': 3, 'kwietnia': 4, 'maja': 5, 'czerwca': 6,
+    'lipca': 7, 'sierpnia': 8, 'września': 9, 'października': 10, 'listopada': 11, 'grudnia': 12
+}
+
+EXPERIENCE_LEVELS = (
+    'asystent', 'praktykant / stażysta', 'młodszy specjalista (junior)',
+    'starszy specjalista (senior)', 'specjalista (mid / regular)',
+    'ekspert', 'menedżer', 'kierownik / koordynator'
+)
+
+CONTRACT_TYPES = (
+    'umowa o pracę', 'umowa zlecenie', 'umowa o dzieło',
+    'umowa o staż / praktyki', 'umowa o pracę tymczasową',
+    'umowa agencyjna', 'umowa na zastępstwo', 'kontrakt b2b'
+)
+
+EMPLOYMENT_TYPES = ('pełny etat', 'część etatu', 'dodatkowa / tymczasowa')
+WORKPLACE_TYPES = ('praca stacjonarna', 'praca hybrydowa', 'praca zdalna', 'praca mobilna')
+
+
+# === Helper functions ===
+
+def sleep_random(min_seconds=1, max_seconds=3):
+    """Pause execution for a random number of seconds between min_seconds and max_seconds."""
+    time.sleep(random.randint(min_seconds, max_seconds))
+
+
+def parse_published_dt(published_dt_str):
+    """Parse a date string containing a Polish month into a timezone-aware datetime object."""
+    match = re.search(r'(\d{1,2}) ([a-ząćęłńóśźż]+) (\d{4})', published_dt_str.lower())
+    if match:
+        day = int(match.group(1))
+        month_str = match.group(2)
+        month = POLISH_MONTHS.get(month_str)
+        year = int(match.group(3))
+        if month:
+            return datetime(year, month, day, tzinfo=timezone.utc)
+    return None
+
+
+def init_driver():
+    """Initialize and return a headless Selenium Chrome WebDriver instance."""
     options = Options()
     options.binary_location = "/usr/bin/chromium"
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-gpu")
-    if USER_AGENT_1:
-        options.add_argument(f"user-agent={USER_AGENT_1}")
     service = Service("/usr/bin/chromedriver")
     return webdriver.Chrome(service=service, options=options)
 
 
-
 def init_kafka_producer():
     """Initialize and return an Avro Kafka producer based on environment variables."""
-    if not all([KAFKA_BOOTSTRAP_SERVERS_COMMON, PRODUCER_CLIENT_ID_1, ROW_DATA_TOPIC, SCHEMA_REGISTRY_URL]):
+    if not all([KAFKA_BOOTSTRAP_SERVERS_COMMON, PRODUCER_CLIENT_ID_2, ROW_DATA_TOPIC, SCHEMA_REGISTRY_URL]):
         raise EnvironmentError("Required environment variables are not set!")
-
     with open("schemas/key_schema.avsc") as f:
         key_schema_str = f.read()
     with open("schemas/job_offer_schema.avsc") as f:
@@ -77,191 +107,175 @@ def init_kafka_producer():
     producer = AvroProducer(
         {
             'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS_COMMON,
-            'client.id': PRODUCER_CLIENT_ID_1,
-            'schema.registry.url': SCHEMA_REGISTRY_URL
+            'client.id': PRODUCER_CLIENT_ID_2,
+            'schema.registry.url': SCHEMA_REGISTRY_URL,
+            'acks': os.getenv('PRODUCER_ACKS', 'all'),
+            'compression.type': os.getenv('PRODUCER_COMPRESSION', 'zstd'),
+            'linger.ms': int(os.getenv('PRODUCER_LINGER_MS', '50')),
         },
-        default_key_schema=loads(key_schema_str),
+                
+                
+        default_key_schema=loads(key_schema_str),       
         default_value_schema=loads(value_schema_str)
     )
-
     return producer, ROW_DATA_TOPIC
 
-def extract_location(offer) -> str:
-    """Extract the job location from the offer card."""
-    place_icon = offer.select_one(LOCATION_ICON_SELECTOR)
-    if place_icon:
-        sibling = place_icon.find_next("span")
-        return sibling.get_text(strip=True) if sibling else None
-    return None
 
-
-def extract_offer_link(offer) -> str:
-    """Extract and build the full offer link from relative href."""
-    anchor = offer.select_one("a.offer-card")
-    if anchor and anchor.has_attr("href"):
-        return f"{URL_1}{anchor['href']}"
-    return None
-
-
-def extract_offer_details_and_skills(driver, url: str) -> dict:
-    """Extract detailed offer metadata and skills from the offer detail page."""
+def get_offers_from_page(driver, url):
+    """Load the given URL and return all job offer elements found on the page."""
+    log.info(f"Scraping page: {url}")
     driver.get(url)
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, DETAILS_CONTAINER_SELECTOR))
-    )
+    sleep_random(2, 4)
     soup = BeautifulSoup(driver.page_source, "html.parser")
+    return soup.select(OFFER_SELECTOR)
 
+
+def extract_title_company_location(offer):
+    """Extract the job title, company name, and location from a job offer element."""
+    title = offer.select_one(TITLE_SELECTOR).text.strip()
+    company = offer.select_one(COMPANY_SELECTOR).text.strip()
+    location = offer.select_one(LOCATION_SELECTOR).text.strip()
+    location = location.replace(LOCATION_PREFIX_1, "")
+    location = location.replace(LOCATION_PREFIX_2, "")
+    return title, company, location
+
+
+def extract_salary(offer):
+    """Extract and clean salary information from a job offer. Returns a list or an empty list."""
+    el = offer.select_one(SALARY_SELECTOR)
+    row = el.text.strip().replace('\u00A0', '') if el else ''
+    return [row] if row else []
+
+
+def extract_offer_link(offer):
+    """Extract the job offer URL from the given offer element."""
+    el = offer.select_one(LINK_SELECTOR)
+    return el['href'] if el and 'href' in el.attrs else None
+
+
+def extract_published_date(offer):
+    """Extract and parse the job posting's publication date."""
+    raw = offer.select_one(PUBLISHED_SELECTOR).text.strip()
+    return parse_published_dt(raw)
+
+
+def extract_offer_tags(offer):
+    """Extract additional metadata (e.g. contract type, work mode) from the job offer."""
+    items = []
+    for i in range(7):
+        li = offer.select_one(ADDITIONAL_INFO_SELECTOR.format(i))
+        if li:
+            items.append(li.text.strip().lower())
+    return " ".join(items)
+
+
+def map_offer_tags_to_categories(info):
+    """Map text-based job metadata into structured categories like contract type or work mode."""
     return {
-        **extract_metadata(soup),
-        "skills": extract_skills(soup),
-        "salaries": extract_salaries(soup)
+        "experience_level": [x for x in EXPERIENCE_LEVELS if x in info],
+        "contract_type": [x for x in CONTRACT_TYPES if x in info],
+        "employment_type": [x for x in EMPLOYMENT_TYPES if x in info],
+        "work_mode": [x for x in WORKPLACE_TYPES if x in info],
     }
 
 
-def extract_metadata(soup: BeautifulSoup) -> dict:
-    """Extract general job metadata like type of work, experience, etc."""
-    mapping = {
-        "Type of work": "type_of_work",
-        "Experience": "experience",
-        "Employment Type": "employment_type",
-        "Operating mode": "operating_mode"
-    }
-    result = {
-        "type_of_work": None,
-        "experience": None,
-        "employment_type": None,
-        "operating_mode": None
-    }
-    for box in soup.select(METADATA_BOX_SELECTOR):
-        title = box.select_one(METADATA_TITLE_SELECTOR)
-        value = box.select_one(METADATA_VALUE_SELECTOR)
-        if title and value:
-            key = mapping.get(title.text.strip())
-            if key:
-                result[key] = [value.text.strip()]
-    return result
+def extract_skills(driver, url):
+    """Open the job offer page and extract required and optional technologies."""
+    driver.get(url)
+    sleep_random(3, 7)
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    required = [s.get_text(strip=True) for s in soup.select(TECH_REQUIRED_SELECTOR)]
+    optional = [s.get_text(strip=True) + " (optional)" for s in soup.select(TECH_OPTIONAL_SELECTOR)]
+    return required + optional
 
 
-def extract_skills(soup: BeautifulSoup) -> list:
-    """Extract a list of required and optional skills with levels if available."""
-    skills = []
-    for box in soup.select(SKILLS_BOX_SELECTOR):
-        name = box.find("h4")
-        level = box.find("span")
-        if name:
-            skill = name.get_text(strip=True)
-            if level:
-                skill += f" ({level.get_text(strip=True)})"
-            skills.append(skill)
-    return skills
+def extract_offer_data(offer, driver, cutoff_time):
+    """
+    Process a single job offer element and extract all relevant information.
 
-
-def extract_salaries(soup: BeautifulSoup) -> list:
-    """Extract salary information as list of strings, including min/max and 'Undisclosed' status."""
-    salaries = []
-
-    # Min/max salary + details
-    for box in soup.select(SALARY_BOX_SELECTOR):
-        minmax = box.select(SALARY_MINMAX_SELECTOR)
-        details = box.select_one(SALARY_DETAILS_SELECTOR)
-
-        minmax_text = minmax[0].get_text(strip=True) if minmax else ""
-        details_text = details.get_text(strip=True) if details else ""
-
-        if minmax_text and details_text:
-            salaries.append(f"{minmax_text} ({details_text})")
-        elif minmax_text:
-            salaries.append(minmax_text)
-        elif details_text:
-            salaries.append(details_text)
-
-    # Fallback for "Undisclosed"
-    undisclosed = soup.select_one(UNDISCLOSED_SELECTOR)
-    if undisclosed and SALARY_TEXT in undisclosed.get_text(strip=True):
-        salaries.append(SALARY_RESULT)
-
-    return salaries
-
-
-def normalize_published_dt(published_dt_raw: str) -> datetime:
-    """Normalize the publication date from relative text to absolute UTC datetime."""
-    if not published_dt_raw:
-        return None
-    s = published_dt_raw.strip().lower()
-    now = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    parts = s.split(" ")
-    if parts[0] == "new":
-        return now
-    if len(parts) >= 2 and parts[1] in {"day", "days", "days ago"}:
-        return now - timedelta(days=int(parts[0]))
-    return None
-
-
-def extract_offer_data(offer, driver) -> dict:
-    """Extract and consolidate all job offer data from the listing and detail page."""
+    Returns:
+        dict: Job offer data if valid and recent.
+        bool: True if the offer is older than the cutoff and scraping should stop.
+    """
     try:
-        title_el = offer.select_one("h3")
-        company_el = offer.select_one(COMPANY_ICON_SELECTOR)
-        published_el = offer.select_one(PUBLISHED_SELECTOR)
-
-        title = title_el.get_text(strip=True) if title_el else "N/A"
-        company = company_el.get_text(strip=True) if company_el else "N/A"
-        location = extract_location(offer)
+        title, company, location = extract_title_company_location(offer)
+        salary = extract_salary(offer)
         url = extract_offer_link(offer)
-        details = extract_offer_details_and_skills(driver, url) if url else {}
-        published_dt = normalize_published_dt(published_el.text.strip()) if published_el else None
+        if not url:
+            return None, False
 
-        return {
+        published = extract_published_date(offer)
+        if published < cutoff_time:
+            return None, True
+
+        skills = extract_skills(driver, url)
+        tags = extract_offer_tags(offer)
+        categories = map_offer_tags_to_categories(tags)
+
+        job = {
             "title": title,
             "company": company,
             "location": location,
-            "salary_range": details.get("salaries", []),
+            "salary_range": salary,
             "link": url,
-            "required_skills": details.get("skills", []),
-            "employment_type": details.get("type_of_work"),
-            "experience_level": details.get("experience"),
-            "contract_type": details.get("employment_type"),
-            "work_mode": details.get("operating_mode"),
-            "published_dt": published_dt.isoformat() if published_dt else None,
+            "required_skills": skills,
+            "employment_type": categories["employment_type"],
+            "experience_level": categories["experience_level"],
+            "contract_type": categories["contract_type"],
+            "work_mode": categories["work_mode"],
+            "published_dt": published.isoformat(),
             "scraped_dt": datetime.now(timezone.utc).isoformat()
         }
+        return job, False
 
     except Exception as e:
-        log.error(f"Error parsing job offer: {e}")
-        return None
+        log.error(f"Error while processing offer: {e}")
+        return None, False
+
+
+def process_offer_page(driver, producer, topic, key, cutoff, url):
+    """
+    Process all job offers found on a given listing page.
+
+    Returns:
+        bool: True if scraping should stop (due to old data or no offers).
+    """
+    offers = get_offers_from_page(driver, url)
+    if not offers:
+        return True
+
+    for offer in offers:
+        job, should_stop = extract_offer_data(offer, driver, cutoff)
+        if should_stop:
+            return True
+        if job:
+            producer.produce(topic=topic, key=key, value=job)
+            log.info(f"Sent to Kafka: {job['title']} @ {job['company']}")
+            sleep_random(2, 5)
+    return False
+
 
 def main():
-    """Main entry point: load listings page, extract offers, and send them to Kafka."""
+    """Main loop that coordinates scraping job listings and sending them to Kafka."""
+    sleep_random(7, 10)
     driver = init_driver()
-    url = f"{URL_1}{LISTINGS_PATH}"
-    driver.get(url)
     producer, topic = init_kafka_producer()
+    key = URL_2
 
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, LISTINGS_CONTAINER_SELECTOR))
-    )
+    cutoff_time = datetime.now(timezone.utc) - timedelta(days=1)
 
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-    offer_cards = soup.select(OFFER_CARD_SELECTOR)
-    for offer in offer_cards[:200]:
-        job_data = extract_offer_data(offer, driver)
-        if job_data:
-            try:
-                producer.produce(
-                    topic=topic,
-                    key=URL_1,
-                    value=job_data
-                )
-                log.info(f"Sent to Kafka: {job_data['title']} @ {job_data['company']}")
-                time.sleep(random.uniform(3, 10))
-            except Exception as e:
-                log.error(f"Error sending to Kafka: {e}")
-                traceback.print_exc()
+    page = 1
+    while True:
+        url = LISTINGS_PATH_2 if page == 1 else f"{LISTINGS_PATH_2}&pn={page}"
+        stop = process_offer_page(driver, producer, topic, key, cutoff_time, url)
+        if stop:
+            break
+        page += 1
+        sleep_random(15, 20)
 
-    producer.flush()
     driver.quit()
+    producer.flush()
 
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

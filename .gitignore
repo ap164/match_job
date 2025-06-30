@@ -6,6 +6,7 @@
 
 # 🐍 Python bytecode and cache
 __pycache__/
+.pytest_cache
 *.pyc
 *.pyo
 *.pyd
@@ -13,7 +14,7 @@ __pycache__/
 # 📦 Virtual environments
 .venv/
 venv/
-
+log/
 # 📄 Log files
 *.log
 
@@ -27,3 +28,9 @@ venv/
 
 # 🚫 Ignore Flink job dependencies
 flink_job/lib/
+
+# other
+statement/job_matches_email.html
+statement/requirements_config.yaml
+statement/tabelka.html
+statement/statement_output.ipynb

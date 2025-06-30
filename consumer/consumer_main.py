@@ -39,7 +39,7 @@ def start_consumer_loop(consumer, collection, avro_schema):
             continue
 
         # 1. SALARY NORMALIZATION
-        record["salary"] = parse_salary(record.get("salary", ""))
+        record["salary_range"] = parse_salary(record.get("salary_range", ""))
         # 2. WORK MODE NORMALIZATION
         record["work_mode"] = work_mode_normalize(record.get("work_mode", []))
         # 3. EXPERIENCE LEVEL NORMALIZATION

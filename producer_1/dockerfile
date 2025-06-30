@@ -1,18 +1,26 @@
 FROM python:3.11-slim
 
-RUN apt-get update \
- && apt-get install -y \
-      chromium \
-      chromium-driver \
-      curl \
-      unzip \
-      ca-certificates \
-      wget \
- && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    chromium \
+    chromium-driver \
+    fonts-liberation \
+    libnss3 \
+    libxss1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libgtk-3-0 \
+    wget \
+    curl \
+    unzip \
+    gnupg \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ENV CHROME_BIN=/usr/bin/chromium
+ENV PATH="${PATH}:/usr/bin"
 
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY producer_scraper_1.py .
+COPY . .
 
-CMD ["sh", "-c", "sleep 100; while true; do python producer_scraper_1.py; sleep 35000; done"]
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["sh", "-c", "sleep 100; while true; do python producer_scraper_1.py; sleep 1000; done"]

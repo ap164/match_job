@@ -35,26 +35,6 @@ services:
     networks:
       - kafka-net
 
-  producer_2:
-    build:
-      context: ./producer_2
-    depends_on:
-      - kafka
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      PRODUCER_CLIENT_ID: producer_2
-      SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      PRODUCER_ACKS: all
-      PRODUCER_COMPRESSION: zstd
-      PRODUCER_LINGER_MS: 50
-    env_file:
-      - ./.env 
-    volumes:
-      - ./schemas:/app/schemas
-    restart: on-failure
-    networks:
-      - kafka-net
-
   producer_1:
     build:
       context: ./producer_1
@@ -75,6 +55,26 @@ services:
     networks:
       - kafka-net
 
+  producer_2:
+    build:
+      context: ./producer_2
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      PRODUCER_CLIENT_ID: producer_2
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      PRODUCER_ACKS: all
+      PRODUCER_COMPRESSION: zstd
+      PRODUCER_LINGER_MS: 50
+    env_file:
+      - ./.env 
+    volumes:
+      - ./schemas:/app/schemas
+    restart: on-failure
+    networks:
+      - kafka-net
+      
   init-topics:
     image: confluentinc/cp-kafka:latest
     depends_on:
@@ -84,10 +84,10 @@ services:
       -c '
       echo "Czekam na brokera...";
       while ! kafka-topics --bootstrap-server kafka:9092 --list > /dev/null 2>&1; do
-        echo "Kafka jeszcze nie gotowa. Czekam 5s...";
+        echo "Kafka is not ready yet. wait for 5s...";
         sleep 5;
       done;
-      echo "Kafka gotowa. Tworzę topici...";
+      echo "Kafka is ready. create topic...";
 
       kafka-topics --bootstrap-server kafka:9092 \
         --create --if-not-exists \
@@ -137,12 +137,29 @@ services:
     restart: unless-stopped
     command: >
       sh -c "
-        echo 'Czekam na Kafka na porcie 9092...';
+        echo 'Wait for Kafka na porcie 9092...';
         while ! nc -z kafka 9092; do sleep 2; done;
-        echo 'Kafka gotowa – startuję konsumenta';
+        echo 'Kafka is ready – consumer starting';
         python consumer/consumer_main.py
       "
         
+  biweekly-task:
+    build: ./statement
+    container_name: biweekly-task
+    env_file:
+      - .env
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - EMAIL_SMTP=${EMAIL_SMTP}
+      - EMAIL_SENDER=${EMAIL_SENDER}
+      - EMAIL_RECIEVER=${EMAIL_RECIEVER}
+      - EMAIL_SENDER_PASSWORD=${EMAIL_SENDER_PASSWORD}
+    volumes:
+      - ./statement:/app
+      - ./log:/var/log
+    networks:
+      - kafka-net
 
 networks:
   kafka-net:

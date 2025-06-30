@@ -1,0 +1,5 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+HOME=/root
+
+0 10 * * 1 /usr/local/bin/papermill /app/statement.ipynb /app/statement_output.ipynb --kernel python3 >> /var/log/cron.log 2>&1
