@@ -17,3 +17,4 @@ RUN pip install --no-cache-dir -r requirements.txt && \
     mkdir -p /var/log
 
 CMD touch /var/log/cron.log && cron && tail -f /var/log/cron.log
+ 
