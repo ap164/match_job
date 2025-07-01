@@ -2,7 +2,7 @@
 
 🇵🇱 Polish version below
 
-## 🎯 Project Goal
+## Project Goal
 
 This project aims to **automatically collect job offers** from the most popular job platforms in real time and filter them based on **user-defined preferences**.  
 
@@ -17,7 +17,7 @@ It showcases a **real-world application of data engineering** in the recruitment
 
 ---
 
-## ⚙️ How It Works (Technical Overview)
+## How It Works (Technical Overview)
 
 ### 1. Data Sources – **Kafka Producers (Web Scraping)**
 
@@ -57,7 +57,7 @@ A CRON-based analytics module runs periodically (e.g. every 14 days) inside a Do
 
 ---
 
-## 🧰 Technologies Used
+## Technologies Used
 
 - **Python** – scraping, ETL, data processing (`pandas`, `requests`, `selenium`, `bs4`)
 - **Apache Kafka + Avro + Schema Registry** – data streaming & schema validation
@@ -69,7 +69,7 @@ A CRON-based analytics module runs periodically (e.g. every 14 days) inside a Do
 
 ---
 
-## 💡 Summary
+## Summary
 
 This project showcases a **complete real-time data lifecycle**:  
 📥 **collection** → 🧪 **validation** → 🔄 **transformation** → 📊 **analysis** → 📧 **reporting**
@@ -90,7 +90,7 @@ The system is **modular, scalable, and easily extendable** — for example, to s
 
 # 📊 Agregator ofert pracy z dopasowaniem do wymagań użytkownika
 
-## 🎯 Cel projektu
+## Cel projektu
 
 Celem projektu jest **automatyczne zbieranie ofert pracy** z najpopularniejszych platform rekrutacyjnych w czasie rzeczywistym oraz filtrowanie ich zgodnie z **preferencjami użytkownika**.  
 System:
@@ -105,7 +105,7 @@ Projekt prezentuje **praktyczne zastosowanie inżynierii danych** w realnym scen
 
 ---
 
-## ⚙️ Jak to działa (warstwa techniczna)
+## Jak to działa (warstwa techniczna)
 
 ### 1. Źródła danych – **Producenci Kafka (Web Scraping)**
 
@@ -146,7 +146,7 @@ Moduł działa cyklicznie (co 14 dni) jako zadanie CRON w kontenerze Docker:
 
 ---
 
-## 🧰 Użyte technologie
+## Użyte technologie
 
 - **Python** – scraping, ETL, analiza danych (`pandas`, `requests`, `selenium`, `bs4`)
 - **Apache Kafka + Avro + Schema Registry** – streaming i kontrola schematów
@@ -158,7 +158,7 @@ Moduł działa cyklicznie (co 14 dni) jako zadanie CRON w kontenerze Docker:
 
 ---
 
-## 💡 Podsumowanie
+## Podsumowanie
 
 Projekt realizuje **pełny cykl życia danych w czasie rzeczywistym**:  
 📥 **pozyskiwanie** → 🧪 **walidacja** → 🔄 **transformacja** → 📊 **analiza** → 📧 **raportowanie**
