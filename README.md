@@ -1,4 +1,4 @@
-# 📊 Job Offer Aggregator with Candidate Profile Matching
+# Job Offer Aggregator with Candidate Profile Matching
 
 🇵🇱 Polish version below
 
@@ -35,11 +35,11 @@ It showcases a **real-world application of data engineering** in the recruitment
 
 A Python-based consumer reads and processes incoming messages:
 
-- ✅ **Avro decoding** – according to the defined schema  
-- 🔄 **Normalization** – unifying company names, locations, contract types, and experience levels  
-- 💱 **Currency conversion** – using **NBP API** to convert salaries to PLN (net/gross, hourly rates)  
-- 🧹 **Initial filtering** – e.g. removing duplicates or fully on-site offers  
-- 💾 **Data storage in MongoDB** – each offer is saved as a document in a **NoSQL** database
+- **Avro decoding** – according to the defined schema  
+- **Normalization** – unifying company names, locations, contract types, and experience levels  
+- **Currency conversion** – using **NBP API** to convert salaries to PLN (net/gross, hourly rates)  
+- **Initial filtering** – e.g. removing duplicates or fully on-site offers  
+- **Data storage in MongoDB** – each offer is saved as a document in a **NoSQL** database
 
 ![Screenshot 2025-07-1 at 11 37 23](https://github.com/user-attachments/assets/3c844cea-324a-46be-9bf2-7483399c8b95)
 
@@ -47,11 +47,11 @@ A Python-based consumer reads and processes incoming messages:
 
 A CRON-based analytics module runs periodically (e.g. every 14 days) inside a Docker container:
 
-- 📥 Loads job offers from MongoDB (last 14 days)  
-- 🧩 Filters based on user preferences (`requirements_config.yaml`)  
-- 🧠 Calculates **Skill Match** – comparing required vs. owned skills (must-have & nice-to-have)  
-- 📊 Generates an **HTML report** with the top-matching offers  
-- 📬 Sends the report via email (**SMTP**)
+- Loads job offers from MongoDB (last 14 days)  
+- Filters based on user preferences (`requirements_config.yaml`)  
+- Calculates **Skill Match** – comparing required vs. owned skills (must-have & nice-to-have)  
+- Generates an **HTML report** with the top-matching offers  
+- Sends the report via email (**SMTP**)
 
 <img width="338" alt="Screenshot 2025-07-1 at 11 48 13" src="https://github.com/user-attachments/assets/df9aec37-70ec-4c5c-a6d6-0de60afc3c56" />
 
@@ -72,13 +72,13 @@ A CRON-based analytics module runs periodically (e.g. every 14 days) inside a Do
 ## Summary
 
 This project showcases a **complete real-time data lifecycle**:  
-📥 **collection** → 🧪 **validation** → 🔄 **transformation** → 📊 **analysis** → 📧 **reporting**
+ **collection** → **validation** → **transformation** → **analysis** → **reporting**
 
 The system is **modular, scalable, and easily extendable** — for example, to support new job platforms or advanced scoring models.
 
 ---
 
-> 🛠️ This project was built for educational and personal skill development purposes only.
+> This project was built for educational and personal skill development purposes only.
 
 
 
@@ -88,7 +88,7 @@ The system is **modular, scalable, and easily extendable** — for example, to s
 
 
 
-# 📊 Agregator ofert pracy z dopasowaniem do wymagań użytkownika
+# Agregator ofert pracy z dopasowaniem do wymagań użytkownika
 
 ## Cel projektu
 
@@ -123,11 +123,11 @@ Projekt prezentuje **praktyczne zastosowanie inżynierii danych** w realnym scen
 
 Consumer subskrybuje topic i przetwarza dane:
 
-- ✅ **Dekodowanie Avro** – zgodnie ze schematem danych  
-- 🔄 **Normalizacja** – nazwy, lokalizacje, typy umów, poziomy doświadczenia  
-- 💱 **Przeliczanie walut** – na podstawie kursu z **API NBP**, stawki w PLN (netto/brutto)  
-- 🧹 **Filtrowanie wstępne** – np. usuwanie duplikatów, ofert tylko stacjonarnych  
-- 💾 **Zapis do MongoDB** – dane trafiają jako dokumenty do bazy **NoSQL**
+- **Dekodowanie Avro** – zgodnie ze schematem danych  
+- **Normalizacja** – nazwy, lokalizacje, typy umów, poziomy doświadczenia  
+- **Przeliczanie walut** – na podstawie kursu z **API NBP**, stawki w PLN (netto/brutto)  
+- **Filtrowanie wstępne** – np. usuwanie duplikatów, ofert tylko stacjonarnych  
+- **Zapis do MongoDB** – dane trafiają jako dokumenty do bazy **NoSQL**
   
 ![Zrzut ekranu 2025-07-1 o 11 37 23](https://github.com/user-attachments/assets/3c844cea-324a-46be-9bf2-7483399c8b95)
 
@@ -135,11 +135,11 @@ Consumer subskrybuje topic i przetwarza dane:
 
 Moduł działa cyklicznie (co 14 dni) jako zadanie CRON w kontenerze Docker:
 
-- 📥 Pobiera dane z MongoDB (ostatnie 14 dni)  
-- 🧩 Filtrowanie po wymaganiach użytkownika (z pliku `requirements_config.yaml`)  
-- 🧠 Oblicza **Skill Match** – analiza zgodności must-have i nice-to-have  
-- 📊 Tworzy **raport HTML** z listą najlepiej dopasowanych ofert  
-- 📬 Wysyła raport e-mailem do użytkownika (**SMTP**)
+- Pobiera dane z MongoDB (ostatnie 14 dni)  
+- Filtrowanie po wymaganiach użytkownika (z pliku `requirements_config.yaml`)  
+- Oblicza **Skill Match** – analiza zgodności must-have i nice-to-have  
+- Tworzy **raport HTML** z listą najlepiej dopasowanych ofert  
+- Wysyła raport e-mailem do użytkownika (**SMTP**)
   
 <img width="338" alt="Zrzut ekranu 2025-07-1 o 11 48 13" src="https://github.com/user-attachments/assets/df9aec37-70ec-4c5c-a6d6-0de60afc3c56" />
 
@@ -161,11 +161,11 @@ Moduł działa cyklicznie (co 14 dni) jako zadanie CRON w kontenerze Docker:
 ## Podsumowanie
 
 Projekt realizuje **pełny cykl życia danych w czasie rzeczywistym**:  
-📥 **pozyskiwanie** → 🧪 **walidacja** → 🔄 **transformacja** → 📊 **analiza** → 📧 **raportowanie**
+**pozyskiwanie** → **walidacja** → **transformacja** → **analiza** → **raportowanie**
 
 Rozwiązanie jest **modularne, skalowalne i gotowe do rozszerzeń** — np. o kolejne źródła ofert czy inne modele scoringowe.
 
 ---
 
-> 🛠️ Projekt zrealizowany w ramach rozwijania kompetencji i służy wyłącznie celom edukacyjnym.
+> Projekt zrealizowany w ramach rozwijania kompetencji i służy wyłącznie celom edukacyjnym.
 
